@@ -1,4 +1,4 @@
-import { CustomEvent } from '@lxjx/utils';
+import { AnyObject, CustomEvent } from '@lxjx/utils';
 import { VField, VFieldLike, VFieldsProvideFn, VList } from './types';
 
 export const defaultFormConfig = {
@@ -6,18 +6,25 @@ export const defaultFormConfig = {
   verifyFirst: false,
 };
 
+/** 如果field属于某个list, 将list设置为它的parent */
+export const privateKeyParent = 'parent';
+
+/** 为vList设置一个用于存储默认字段的私有属性, 用于重置list时将其还原 */
+export const privateKeyDefaultField = 'defaultField';
+
 /** 检测一个field like是否为 listField */
 export function isListField(f: VFieldLike): f is VList {
   return 'list' in f;
 }
 
-/** 设置field私有属性, 用于判断field是否属于某个list */
-export function setPrivateParent(field: VFieldLike, parent: VList) {
-  (field as any).__parent = parent;
+/** 为对象设私有属性设置值 */
+export function setPrivateKey(obj: AnyObject, k: string, v: any) {
+  obj[`__${k}`] = v;
 }
 
-export function getPrivateParent(field: VFieldLike): VList | null {
-  return (field as any).__parent || null;
+/** 获取对象设私有属性 */
+export function getPrivateKey<V = any>(obj: AnyObject, k: string): V {
+  return obj[`__${k}`];
 }
 
 /** 将任意多个field数组去重并合并返回 */

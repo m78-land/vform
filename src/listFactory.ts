@@ -8,8 +8,14 @@ import {
   setNamePathValue,
   ensureArray,
 } from '@lxjx/utils';
-import { _Ctx, _ListItem, VFieldLike, VForm, VList } from './types';
-import { uniqueFields, setPrivateParent } from './common';
+import { _Ctx, VListItem, VFieldLike, VForm, VList } from './types';
+import {
+  uniqueFields,
+  setPrivateKey,
+  privateKeyParent,
+  privateKeyDefaultField,
+  getPrivateKey,
+} from './common';
 
 export function listFactory(form: VForm, ctx: _Ctx) {
   const createList: VForm['createList'] = fConf => {
@@ -27,6 +33,8 @@ export function listFactory(form: VForm, ctx: _Ctx) {
     const vList: VList = Object.assign(field as VList, {
       list: [],
     });
+
+    setPrivateKey(vList, privateKeyDefaultField, []);
 
     vList.getFlatChildren = (validIsTrue?: boolean) => {
       const ls: VFieldLike[] = [];
@@ -47,7 +55,7 @@ export function listFactory(form: VForm, ctx: _Ctx) {
     };
 
     /** 获取指定key的listItem */
-    function getListItemByKey(key: string): [_ListItem | null, number] {
+    function getListItemByKey(key: string): [VListItem | null, number] {
       const ind = vList.list.findIndex(item => item.key === key);
       return [vList.list[ind] || null, ind];
     }
@@ -78,8 +86,8 @@ export function listFactory(form: VForm, ctx: _Ctx) {
 
       syncItemNameIndex();
 
-      ctx.tickUpdate(...updateList);
-      ctx.tickChange(vList);
+      form.tickUpdate(...updateList);
+      form.tickChange(vList);
     }
 
     vList.add = (fields, key, isDefault) => {
@@ -87,15 +95,20 @@ export function listFactory(form: VForm, ctx: _Ctx) {
 
       // 设置私有字段标示
       fields.forEach(item => {
-        setPrivateParent(item, vList);
+        setPrivateKey(item, privateKeyParent, vList);
       });
 
       if (!key) {
-        vList.list.push({
+        const lItem = {
           key: createRandString(),
           list: uniqueFields(fields),
-          defaultIndex: isDefault ? vList.list.length : undefined,
-        });
+        };
+
+        if (isDefault) {
+          getPrivateKey<VListItem[]>(vList, privateKeyDefaultField)[vList.list.length] = lItem;
+        }
+
+        vList.list.push(lItem);
         updateList.push(...fields);
       } else {
         const [current] = getListItemByKey(key);
@@ -115,8 +128,8 @@ export function listFactory(form: VForm, ctx: _Ctx) {
         ctx.touchLock = false;
       });
 
-      ctx.tickUpdate(...updateList);
-      ctx.tickChange(vList);
+      form.tickUpdate(...updateList);
+      form.tickChange(vList);
     };
 
     vList.remove = (index: number) => {
@@ -131,8 +144,8 @@ export function listFactory(form: VForm, ctx: _Ctx) {
 
         syncItemNameIndex();
 
-        ctx.tickUpdate(...updateList);
-        ctx.tickChange(vList);
+        form.tickUpdate(...updateList);
+        form.tickChange(vList);
       }
     };
 
@@ -157,6 +170,28 @@ export function listFactory(form: VForm, ctx: _Ctx) {
       },
       // 设置值, 需要设置所有子级的值
       set(val) {
+        if (!isArray(val)) return;
+
+        const len = vList.list.length;
+        const diff = val.length - len;
+
+        // 设置值时, 如果值长度大于当前list, 往list后添加空的记录, 如果小于, 删除list中多出来的列
+        if (diff < 0) {
+          const rLs = vList.list.splice(val.length, Math.abs(diff));
+          const changes = rLs.reduce<VFieldLike[]>((p, i) => {
+            p.push(...i.list);
+            return p;
+          }, []);
+          if (changes.length) form.tickUpdate(...changes);
+        } else if (diff > 0) {
+          for (let i = 0; i < diff; i++) {
+            vList.add([], undefined);
+            const curIndex = len + i;
+            // 自动增加了记录, 对外通知
+            fConf.onFillField?.(vList, vList.list[curIndex].key, curIndex);
+          }
+        }
+
         vList.getFlatChildren().forEach(item => {
           const obj: any = {};
           setNamePathValue(obj, vList.name, val);
@@ -164,6 +199,13 @@ export function listFactory(form: VForm, ctx: _Ctx) {
         });
       },
     });
+
+    // 包含默认值时将列表扩展到对应长度, 列表字段无法确定所以交给用户根据list长度自动补全
+    if (isArray(vList.defaultValue) && vList.defaultValue.length) {
+      vList.defaultValue.forEach(() => vList.add([], undefined, true));
+      fConf.onFillField &&
+        vList.list.forEach((item, index) => fConf.onFillField?.(vList, item.key, index));
+    }
 
     if (!fConf.separate) {
       ctx.list.push(vList);

@@ -2,12 +2,12 @@ import {
   getNamePathValue,
   isNumber,
   isTrueEmpty,
-  stringifyNamePath,
   setNamePathValue,
+  stringifyNamePath,
 } from '@lxjx/utils';
 import cloneDeep from 'lodash/cloneDeep';
-import { _Ctx, VField, VFieldConfig, VForm } from './types';
-import { getPrivateParent, isListField } from './common';
+import { _Ctx, VListItem, VField, VFieldConfig, VForm, VList } from './types';
+import { getPrivateKey, isListField, privateKeyDefaultField, privateKeyParent } from './common';
 
 export function fieldFactory(form: VForm, ctx: _Ctx) {
   return function createField(fConf: VFieldConfig): VField {
@@ -42,7 +42,8 @@ export function fieldFactory(form: VForm, ctx: _Ctx) {
 
       if (!skipParentCheck) {
         // 如果存在list父级, 应该从父级取defaultValue
-        const parent = getPrivateParent(field);
+        const parent = getPrivateKey<VList | undefined>(field, privateKeyParent);
+
         if (parent && parent.defaultValue !== undefined) {
           const obj: any = {};
           setNamePathValue(obj, parent.name, parent.defaultValue);
@@ -58,17 +59,25 @@ export function fieldFactory(form: VForm, ctx: _Ctx) {
 
       // 如果是list则将其重置, 只保留包含default的项
       if (isListField(field)) {
-        field.list = field.list
-          .filter(item => isNumber(item.defaultIndex))
-          .sort((a, b) => a.defaultIndex! - b.defaultIndex!);
+        // 更新所有现有字段
+        form.tickUpdate(...field.getFlatChildren());
+
+        field.list = [...getPrivateKey<VListItem[]>(field, privateKeyDefaultField)];
 
         // 原地交换, 主要目的是更新name中的index
         if (field.list.length !== 0) {
           field.swap(0, 0);
         }
+
+        // 为以更新的列表还原值
+        field.getFlatChildren().forEach(it => {
+          it.value = it.defaultValue;
+          it.touched = false;
+        });
+      } else {
+        field.value = cloneDeep(field.defaultValue);
       }
 
-      field.value = cloneDeep(field.defaultValue);
       field.validating = false;
       field.error = '';
       field.touched = false;
@@ -127,7 +136,7 @@ export function fieldFactory(form: VForm, ctx: _Ctx) {
         set(n) {
           if (touched === n) return;
           touched = n;
-          ctx.tickUpdate(field);
+          form.tickUpdate(field);
         },
       },
       value: {
@@ -152,7 +161,7 @@ export function fieldFactory(form: VForm, ctx: _Ctx) {
         set(n) {
           if (validating === n) return;
           validating = n;
-          ctx.tickUpdate(field);
+          form.tickUpdate(field);
         },
       },
       error: {
@@ -164,7 +173,7 @@ export function fieldFactory(form: VForm, ctx: _Ctx) {
         set(err: string) {
           if (error === err) return;
           error = err;
-          ctx.tickUpdate(field);
+          form.tickUpdate(field);
         },
       },
       valid: {
@@ -176,7 +185,7 @@ export function fieldFactory(form: VForm, ctx: _Ctx) {
         set(v: boolean) {
           if (valid === v) return;
           valid = v;
-          ctx.tickUpdate(field);
+          form.tickUpdate(field);
         },
       },
       changed: {

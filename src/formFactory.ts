@@ -9,8 +9,9 @@ import {
   VFormConfig,
   VFormFailFn,
   VFormValueProvideFn,
+  VList,
 } from './types';
-import { getNextTickEmit, getPrivateParent, isListField } from './common';
+import { getNextTickEmit, getPrivateKey, isListField, privateKeyParent } from './common';
 
 export function formFactory(config: VFormConfig): [VForm, _Ctx] {
   const { defaultValue: dv, verifyFirst } = config;
@@ -31,8 +32,6 @@ export function formFactory(config: VFormConfig): [VForm, _Ctx] {
     sortStep: 100,
     defaultValue: cloneDeep(dv)!,
     list: [],
-    tickUpdate,
-    tickChange,
     touchLock: false,
     fieldFailEmitLock: false,
   };
@@ -160,7 +159,7 @@ export function formFactory(config: VFormConfig): [VForm, _Ctx] {
     const ind = ls.findIndex(item => item.key === key);
     const cur = ls[ind];
 
-    const parent = getPrivateParent(cur);
+    const parent = getPrivateKey<VList | undefined>(cur, privateKeyParent);
 
     if (parent) {
       parent.list.forEach(item => {

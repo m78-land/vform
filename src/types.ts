@@ -63,15 +63,15 @@ export interface VForm {
    * */
   createField: (fConf: VFieldConfig) => VField;
   /** 创建列表 */
-  createList: (fConf: VFieldConfig) => VList;
+  createList: (fConf: VListConfig) => VList;
   /** 字段状态改变触发, (touched/reset/验证) */
   updateEvent: CustomEvent<VFieldsProvideFn>;
   /** 触发updateEvent.emit, 如果多次调用, 会在下一次事件周期中统一触发 */
-  tickUpdate: (...args: VField[]) => void;
+  tickUpdate: (...args: VFieldLike[]) => void;
   /** 字段值改变事件 */
   changeEvent: CustomEvent<VFieldsProvideFn>;
   /** 触发changeEvent.emit, 如果多次调用, 会在下一次事件周期中统一触发 */
-  tickChange: (...args: VField[]) => void;
+  tickChange: (...args: VFieldLike[]) => void;
   /** 提交事件 */
   submitEvent: CustomEvent<VFormValueProvideFn>;
   /** 验证失败的回调, 失败分为form级的验证失败和field级的, 可通过isSubmit参数区分 */
@@ -121,12 +121,32 @@ export interface VField extends Schema {
   reset: () => void;
 }
 
+export interface VListConfig extends VFieldConfig {
+  /**
+   * 当defaultValue初始化或手动更改list的value时, 如果当前list.value数组的长度大于现有的VListItem数量, list内部会自动创建VListItem来补齐缺少的数量,
+   * 每一次触发补齐都会触发一次此回调, 可以在此回调中添加上缺少的字段
+   *
+   * 传入自动添加的ListItem的key和所属索引, 可以通过list上的add和withName方法来添加字段:
+   * ```
+   * onFillField: ((item, index) => {
+   *   list.add([
+   *     form.createField({ name: list.withName(index, 'name'), separate: true }),
+   *     form.createField({ name: list.withName(index, 'desc'), separate: true }),
+   *   ]);
+   * });
+   * ```
+   * */
+  onFillField?: (vList: VList, key: string, index: number) => void;
+}
+
 export interface VList extends VField {
   /** 存放list子项 */
-  list: _ListItem[];
+  list: VListItem[];
   /** 创建子项name的帮助函数 */
   withName: (index: number, name: NamePath) => NamePath;
-  /** 新增一条记录, 如果未传key则新增在最底部, 如果索引已存在记录则增加到该记录中, isDefault用于设置list的初始项, 重置时会对这些初始项进行保留 */
+  /**
+   * 新增一条记录, 如果未传key则新增在最底部, 如果索引已存在记录则增加到该记录中
+   * - isDefault用于设置list的初始项, 重置时会对这些初始项进行保留 */
   add: (fields: VFieldLike[], key?: string, isDefault?: boolean) => void;
   /** 移除指定index的记录 */
   remove: (index: number) => void;
@@ -141,6 +161,12 @@ export interface VList extends VField {
   getFlatChildren: (validIsTrue?: boolean) => VFieldLike[];
 }
 
+/** 一个list项 */
+export interface VListItem {
+  key: string;
+  list: VField[];
+}
+
 export interface _Ctx {
   /** 排序基准值 */
   sortSeed: number;
@@ -150,20 +176,8 @@ export interface _Ctx {
   defaultValue: AnyObject;
   /** 所有实例 */
   list: VField[];
-  /** 统一调度的updateEmit */
-  tickUpdate: (...args: VField[]) => void;
-  /** 统一调度的changeEmit */
-  tickChange: _Ctx['tickUpdate'];
   /** 用于主动更新value但不想自动更改touched时使用 */
   touchLock: boolean;
   /** 锁定field级的fail事件触发 */
   fieldFailEmitLock: boolean;
-}
-
-/** 一个list项 */
-export interface _ListItem {
-  key: string;
-  list: VField[];
-  /** 若此项有值, 表示item为默认项, 应该重置时根据索引还原 */
-  defaultIndex?: number;
 }
