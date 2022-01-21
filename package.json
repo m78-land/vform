@@ -1,6 +1,6 @@
 {
   "name": "@m78/vform",
-  "version": "1.1.0",
+  "version": "1.1.5",
   "description": "virtual form library",
   "keywords": [],
   "main": "index.js",
@@ -27,7 +27,7 @@
     "build:example": "vite build --config config/vite.config.ts"
   },
   "dependencies": {
-    "@lxjx/utils": "^1.16.1",
+    "@lxjx/utils": "^1.16.2",
     "@m78/verify": "^1.1.1",
     "@types/lodash": "^4.14.178",
     "lodash": "^4.17.21",

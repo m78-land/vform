@@ -12,6 +12,9 @@ export const privateKeyParent = 'parent';
 /** 为vList设置一个用于存储默认字段的私有属性, 用于重置list时将其还原 */
 export const privateKeyDefaultField = 'defaultField';
 
+/** 手动设置values */
+export const privateKeyDelaySetValues = 'defaultField';
+
 /** 检测一个field like是否为 listField */
 export function isListField(f: VFieldLike): f is VList {
   return 'list' in f;

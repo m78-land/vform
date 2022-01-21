@@ -123,17 +123,22 @@ export interface VField extends Schema {
 
 export interface VListConfig extends VFieldConfig {
   /**
-   * 当defaultValue初始化或手动更改list的value时, 如果当前list.value数组的长度大于现有的VListItem数量, list内部会自动创建VListItem来补齐缺少的数量,
-   * 每一次触发补齐都会触发一次此回调, 可以在此回调中添加上缺少的字段
+   * 用于为list同步field, 会在以下情况触发:
+   * - defaultValue初始化赋值或手动更改list的value时, 如果value的长度大于或小于现有记录数量,
+   * list内部会自动新增或删除记录来同步记录的长度
+   * - 通过list.add()新增记录时, 如果没有传入任何field, 会新增一条空记录并触发onFillField
    *
-   * 传入自动添加的ListItem的key和所属索引, 可以通过list上的add和withName方法来添加字段:
+   * 可以通过list上的add和withName方法来添加字段:
    * ```
-   * onFillField: ((item, index) => {
-   *   list.add([
-   *     form.createField({ name: list.withName(index, 'name'), separate: true }),
-   *     form.createField({ name: list.withName(index, 'desc'), separate: true }),
-   *   ]);
-   * });
+   *  onFillField: (vl, key, index) => {
+   *     vl.add({
+   *       fields: [
+   *         form.createField({ name: vl.withName(index, 'name'), separate: true }),
+   *         form.createField({ name: vl.withName(index, 'desc'), separate: true }),
+   *       ],
+   *       key,
+   *     });
+   *   },
    * ```
    * */
   onFillField?: (vList: VList, key: string, index: number) => void;
@@ -143,11 +148,18 @@ export interface VList extends VField {
   /** 存放list子项 */
   list: VListItem[];
   /** 创建子项name的帮助函数 */
-  withName: (index: number, name: NamePath) => NamePath;
-  /**
-   * 新增一条记录, 如果未传key则新增在最底部, 如果索引已存在记录则增加到该记录中
-   * - isDefault用于设置list的初始项, 重置时会对这些初始项进行保留 */
-  add: (fields: VFieldLike[], key?: string, isDefault?: boolean) => void;
+  withName: (index: number, name?: NamePath) => NamePath;
+  /** 新增一条记录 */
+  add: (para?: {
+    /** [] | 待添加的一组Field, 没有传入任何field时会触发onFillField */
+    fields?: VFieldLike[];
+    /** 添加到指定key的位置, 未传时添加到底部 */
+    key?: string;
+    /** 是否为list的初始项, 重置时会还原为初始项组成的list */
+    isDefault?: boolean;
+    /** 触发onFillField自动添加记录时, 会以此值作为新增记录的初始值 */
+    fillValue?: any;
+  }) => void;
   /** 移除指定index的记录 */
   remove: (index: number) => void;
   /** 将index的记录移动到index2的位置 */

@@ -1418,10 +1418,18 @@
     "@umijs/fabric" "2.2.0"
     prettier "^2.0.5"
 
-"@lxjx/utils@^1.16.0", "@lxjx/utils@^1.16.1":
+"@lxjx/utils@^1.16.0":
   version "1.16.1"
   resolved "https://registry.npmjs.org/@lxjx/utils/-/utils-1.16.1.tgz#61d6bb8ce4babf84b53383e148726a34af07231f"
   integrity sha512-4vrPNNiaLVUPiiFX81Q6mmt/hmcQOP544YAvxOpwkUKKmFH5nfoqoOePxBRD/g8UrUlGG+as7TgaftIbySvkrA==
+  dependencies:
+    lodash "^4.17.21"
+    tslib "^2.1.0"
+
+"@lxjx/utils@^1.16.2":
+  version "1.16.2"
+  resolved "https://registry.npmjs.org/@lxjx/utils/-/utils-1.16.2.tgz#74f83effb2afaeadc3ddc520de76bfd7fdc8d6aa"
+  integrity sha512-5ZkPoISAlY13/zLCEgcMHqeSaPRtg3IJFD5TwXKfbyhZ8H/bDvJd5XPQqT6wxWxW/PWN8JC/5h0TuteUbMdz5g==
   dependencies:
     lodash "^4.17.21"
     tslib "^2.1.0"
@@ -5619,12 +5627,7 @@ lodash.zip@^4.2.0:
   resolved "https://registry.npm.taobao.org/lodash.zip/download/lodash.zip-4.2.0.tgz#ec6662e4896408ed4ab6c542a3990b72cc080020"
   integrity sha1-7GZi5IlkCO1KtsVCo5kLcswIACA=
 
-lodash@^4.17.10, lodash@^4.17.11, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.4, lodash@^4.7.0:
-  version "4.17.21"
-  resolved "https://registry.npm.taobao.org/lodash/download/lodash-4.17.21.tgz?cache=0&sync_timestamp=1613835817439&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2Flodash%2Fdownload%2Flodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
-  integrity sha1-Z5WRxWTDv/quhFTPCz3zcMPWkRw=
-
-lodash@^4.17.21:
+lodash@^4.17.10, lodash@^4.17.11, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.21, lodash@^4.17.4, lodash@^4.7.0:
   version "4.17.21"
   resolved "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
