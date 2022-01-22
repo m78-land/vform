@@ -151,7 +151,7 @@ export interface VList extends VField {
   withName: (index: number, name?: NamePath) => NamePath;
   /** 新增一条记录 */
   add: (para?: {
-    /** [] | 待添加的一组Field, 没有传入任何field时会触发onFillField */
+    /** [] | 待添加的一组Field, 没有传入任何field时会作为空记录并触发onFillField */
     fields?: VFieldLike[];
     /** 添加到指定key的位置, 未传时添加到底部 */
     key?: string;

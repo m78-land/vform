@@ -38,15 +38,15 @@ const list = form.createList({
     },
   ],
   onFillField: (vl, key, index) => {
-    setTimeout(() => {
-      vl.add({
-        fields: [
-          form.createField({ name: vl.withName(index, 'name'), separate: true }),
-          form.createField({ name: vl.withName(index, 'desc'), separate: true }),
-        ],
-        key,
-      });
+    // setTimeout(() => {
+    vl.add({
+      fields: [
+        form.createField({ name: vl.withName(index, 'name'), separate: true }),
+        form.createField({ name: vl.withName(index, 'desc'), separate: true }),
+      ],
+      key,
     });
+    // }, 100);
   },
 });
 
@@ -73,24 +73,24 @@ const list = form.createList({
 //   ],
 // });
 
-// list.value = [
-//   {
-//     name: 'lxj',
-//     desc: '1',
-//   },
-//   {
-//     name: 'lxj2',
-//     desc: '2',
-//   },
-//   {
-//     name: 'lxj3',
-//     desc: '3',
-//   },
-//   {
-//     name: 'lxj4',
-//     desc: '4',
-//   },
-// ];
+list.value = [
+  {
+    name: 'lxj',
+    desc: '1',
+  },
+  {
+    name: 'lxj2',
+    desc: '2',
+  },
+  {
+    name: 'lxj3',
+    desc: '3',
+  },
+  {
+    name: 'lxj4',
+    desc: '4',
+  },
+];
 
 // 字段异步设置, 但是期间有value变更 如何处理
 
@@ -108,6 +108,6 @@ list.add({
   fillValue: { name: 'hehe', desc: 44 },
 });
 
-setTimeout(() => {
-  console.log(form.getValues());
-}, 500);
+// setTimeout(() => {
+console.log(form.getValues());
+// }, 500);

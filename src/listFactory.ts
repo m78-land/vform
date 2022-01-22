@@ -24,6 +24,7 @@ export function listFactory(form: VForm, ctx: _Ctx) {
       separate: true,
     });
 
+    // value不是数组时将其强制转换为数组
     if (!isArray(field.value)) {
       ctx.touchLock = true;
       field.value = [];
@@ -34,7 +35,7 @@ export function listFactory(form: VForm, ctx: _Ctx) {
       list: [],
     });
 
-    // 存放需要为自动fill的字段填充的值
+    // 备份需要为自动fill的字段填充的值
     const fillValueMap: any = {};
 
     setPrivateKey(vList, privateKeyDefaultField, []);
@@ -100,12 +101,13 @@ export function listFactory(form: VForm, ctx: _Ctx) {
     vList.add = ({ fields = [], key, isDefault, fillValue } = {}) => {
       const updateList: VFieldLike[] = [vList];
 
-      // 设置私有字段标示
+      // 为所有子项设置私有字段标示
       fields.forEach(item => {
         setPrivateKey(item, privateKeyParent, vList);
       });
 
       const _key = key || createRandString();
+      // 当前操作的item记录
       let _current: VListItem | null = null;
 
       // 如果传入了fillValue则覆盖当前的
@@ -113,6 +115,7 @@ export function listFactory(form: VForm, ctx: _Ctx) {
         fillValueMap[_key] = fillValue;
       }
 
+      // 未传入key时先后新增
       if (!key) {
         const lItem: VListItem = {
           key: _key,
@@ -128,6 +131,7 @@ export function listFactory(form: VForm, ctx: _Ctx) {
 
         _current = lItem;
       } else {
+        // 包含key, 新增到key的位置并去重
         const [current] = getListItemByKey(_key);
 
         if (current) {
@@ -139,22 +143,21 @@ export function listFactory(form: VForm, ctx: _Ctx) {
 
       const index = vList.list.findIndex(item => item === _current);
 
+      // 为所有新增的field设置默认值或fillValues
       if (_current) {
         const fillData: any = fillValueMap[_key];
+        // 用于fillValue取值的对象
         const vData: any = {};
 
         if (fillData !== undefined) {
           setNamePathValue(vData, vList.withName(index), fillData);
         }
 
-        // 将所有新增字段的值设置为默认值?
         _current.list.forEach(item => {
           ctx.touchLock = true;
 
           if (fillData !== undefined) {
             item.value = getNamePathValue(vData, item.name);
-            // 已经使用过后将其清空
-            fillValueMap[_key] = undefined;
           } else if (item.value === undefined) {
             item.value = item.defaultValue;
           }
@@ -163,6 +166,7 @@ export function listFactory(form: VForm, ctx: _Ctx) {
         });
       }
 
+      // 未传入field时, 通知onFillField
       if (!fields.length) {
         fConf.onFillField?.(vList, _key, index);
       }
@@ -210,8 +214,8 @@ export function listFactory(form: VForm, ctx: _Ctx) {
         const len = vList.list.length;
         const diff = val.length - len;
 
-        // val长度小于当期记录数, 删除list中多出来的记录
         if (diff < 0) {
+          // val长度小于当期记录数, 删除list中多出来的记录
           const rLs = vList.list.splice(val.length, Math.abs(diff));
           const changes = rLs.reduce<VFieldLike[]>((p, i) => {
             p.push(...i.list);
@@ -244,6 +248,8 @@ export function listFactory(form: VForm, ctx: _Ctx) {
         vList.list.forEach((item, index) => {
           fillValueMap[item.key] = val[index];
         });
+
+        form.tickChange(vList);
       },
     });
 
