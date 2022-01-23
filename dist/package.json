@@ -1,14 +1,14 @@
 {
   "name": "@m78/vform",
-  "version": "0.0.1",
-  "description": "My library",
+  "version": "1.1.7",
+  "description": "virtual form library",
   "keywords": [],
   "main": "index.js",
   "module": "index.js",
   "typings": "./",
-  "repository": "https://github.com/m78-core/my",
+  "repository": "https://github.com/m78-core/vform",
   "author": {
-    "name": "lime",
+    "name": "link",
     "email": "1073830130@qq.com"
   },
   "license": "MIT",
@@ -27,8 +27,8 @@
     "build:example": "vite build --config config/vite.config.ts"
   },
   "dependencies": {
-    "@lxjx/utils": "^1.16.1",
-    "@m78/verify": "^1.1.1",
+    "@lxjx/utils": "^1.7.7",
+    "@m78/verify": "^1.1.2",
     "@types/lodash": "^4.14.178",
     "lodash": "^4.17.21",
     "tslib": "^2.3.1"

@@ -1,5 +1,5 @@
 /**
- * 命名: 表单/字段/表单或字段值 分别以 form / field / value 命名
+ * form / field / value
  * */
 import { Config, NamePath, Schema, Verify } from '@m78/verify';
 import { AnyObject, CustomEvent } from '@lxjx/utils';
@@ -27,7 +27,7 @@ export interface VForm {
     /** 获取指定name的Field, 包括children中的子字段 */
     getField: (name: NamePath) => VField | null;
     /**
-     * 获取所有Field, 不包括listField.children中的子字段
+     * 获取所有Field, 不包括listField的子字段
      * - 传入validIsTrue: true时, 仅获取valid为true的字段
      * */
     getFields: (validIsTrue?: boolean) => VFieldLike[];
@@ -56,17 +56,15 @@ export interface VForm {
      * */
     createField: (fConf: VFieldConfig) => VField;
     /** 创建列表 */
-    createList: (fConf: VFieldConfig) => VList;
-    /**
-     * 字段状态改变触发, (touched/reset/验证)
-     * */
+    createList: (fConf: VListConfig) => VList;
+    /** 字段状态改变触发, (touched/reset/验证) */
     updateEvent: CustomEvent<VFieldsProvideFn>;
     /** 触发updateEvent.emit, 如果多次调用, 会在下一次事件周期中统一触发 */
-    tickUpdate: (...args: VField[]) => void;
+    tickUpdate: (...args: VFieldLike[]) => void;
     /** 字段值改变事件 */
     changeEvent: CustomEvent<VFieldsProvideFn>;
     /** 触发changeEvent.emit, 如果多次调用, 会在下一次事件周期中统一触发 */
-    tickChange: (...args: VField[]) => void;
+    tickChange: (...args: VFieldLike[]) => void;
     /** 提交事件 */
     submitEvent: CustomEvent<VFormValueProvideFn>;
     /** 验证失败的回调, 失败分为form级的验证失败和field级的, 可通过isSubmit参数区分 */
@@ -113,13 +111,44 @@ export interface VField extends Schema {
      * */
     reset: () => void;
 }
+export interface VListConfig extends VFieldConfig {
+    /**
+     * 用于为list同步field, 会在以下情况触发:
+     * - defaultValue初始化赋值或手动更改list的value时, 如果value的长度大于或小于现有记录数量,
+     * list内部会自动新增或删除记录来同步记录的长度
+     * - 通过list.add()新增记录时, 如果没有传入任何field, 会新增一条空记录并触发onFillField
+     *
+     * 可以通过list上的add和withName方法来添加字段:
+     * ```
+     *  onFillField: (vl, key, index) => {
+     *     vl.add({
+     *       fields: [
+     *         form.createField({ name: vl.withName(index, 'name'), separate: true }),
+     *         form.createField({ name: vl.withName(index, 'desc'), separate: true }),
+     *       ],
+     *       key,
+     *     });
+     *   },
+     * ```
+     * */
+    onFillField?: (vList: VList, key: string, index: number) => void;
+}
 export interface VList extends VField {
     /** 存放list子项 */
-    list: _ListItem[];
+    list: VListItem[];
     /** 创建子项name的帮助函数 */
-    withName: (index: number, name: NamePath) => NamePath;
-    /** 新增一条记录, 如果未传key则新增在最底部, 如果索引已存在记录则增加到该记录中, isDefault用于设置list的初始项, 重置时会对这些初始项进行保留 */
-    add: (fields: VFieldLike[], key?: string, isDefault?: boolean) => void;
+    withName: (index: number, name?: NamePath) => NamePath;
+    /** 新增一条记录 */
+    add: (para?: {
+        /** [] | 待添加的一组Field, 没有传入任何field时会作为空记录并触发onFillField */
+        fields?: VFieldLike[];
+        /** 添加到指定key的位置, 未传时添加到底部 */
+        key?: string;
+        /** 是否为list的初始项, 重置时会还原为初始项组成的list */
+        isDefault?: boolean;
+        /** 触发onFillField自动添加记录时, 会以此值作为新增记录的初始值 */
+        fillValue?: any;
+    }) => void;
     /** 移除指定index的记录 */
     remove: (index: number) => void;
     /** 将index的记录移动到index2的位置 */
@@ -132,6 +161,11 @@ export interface VList extends VField {
      * */
     getFlatChildren: (validIsTrue?: boolean) => VFieldLike[];
 }
+/** 一个list项 */
+export interface VListItem {
+    key: string;
+    list: VField[];
+}
 export interface _Ctx {
     /** 排序基准值 */
     sortSeed: number;
@@ -141,20 +175,9 @@ export interface _Ctx {
     defaultValue: AnyObject;
     /** 所有实例 */
     list: VField[];
-    /** 统一调度的updateEmit */
-    tickUpdate: (...args: VField[]) => void;
-    /** 统一调度的changeEmit */
-    tickChange: _Ctx['tickUpdate'];
     /** 用于主动更新value但不想自动更改touched时使用 */
     touchLock: boolean;
     /** 锁定field级的fail事件触发 */
     fieldFailEmitLock: boolean;
-}
-/** 一个list项 */
-export interface _ListItem {
-    key: string;
-    list: VField[];
-    /** 若此项有值, 表示item为默认项, 应该重置时根据索引还原 */
-    defaultIndex?: number;
 }
 //# sourceMappingURL=types.d.ts.map

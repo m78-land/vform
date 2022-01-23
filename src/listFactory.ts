@@ -19,6 +19,10 @@ import {
 
 export function listFactory(form: VForm, ctx: _Ctx) {
   const createList: VForm['createList'] = fConf => {
+    const existField = form.getField(fConf.name);
+
+    if (existField) return existField as VList;
+
     const field = form.createField({
       ...fConf,
       separate: true,

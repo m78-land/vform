@@ -1418,28 +1418,20 @@
     "@umijs/fabric" "2.2.0"
     prettier "^2.0.5"
 
-"@lxjx/utils@^1.16.0":
-  version "1.16.1"
-  resolved "https://registry.npmjs.org/@lxjx/utils/-/utils-1.16.1.tgz#61d6bb8ce4babf84b53383e148726a34af07231f"
-  integrity sha512-4vrPNNiaLVUPiiFX81Q6mmt/hmcQOP544YAvxOpwkUKKmFH5nfoqoOePxBRD/g8UrUlGG+as7TgaftIbySvkrA==
+"@lxjx/utils@^1.7.7":
+  version "1.7.7"
+  resolved "https://registry.npmjs.org/@lxjx/utils/-/utils-1.7.7.tgz#c0c9074937d3dc3811e9049ed23090efec54d3c9"
+  integrity sha512-kmfCO32BAS8JinnrP0W7a3po55iObBqlaxOsS5cXlS6NBLkBgoTpXCHBQAI9onNqOPiySokk2gdgn0SvYG/zRw==
   dependencies:
     lodash "^4.17.21"
     tslib "^2.1.0"
 
-"@lxjx/utils@^1.16.2":
-  version "1.16.2"
-  resolved "https://registry.npmjs.org/@lxjx/utils/-/utils-1.16.2.tgz#74f83effb2afaeadc3ddc520de76bfd7fdc8d6aa"
-  integrity sha512-5ZkPoISAlY13/zLCEgcMHqeSaPRtg3IJFD5TwXKfbyhZ8H/bDvJd5XPQqT6wxWxW/PWN8JC/5h0TuteUbMdz5g==
+"@m78/verify@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.npmjs.org/@m78/verify/-/verify-1.1.2.tgz#04ee0d1bd3e10a5b71a08ebabdde9f0e1580e3d2"
+  integrity sha512-r0UxLiY/ka7eSa2Pk9XD9ON5G2NCYD4+W42xL6kGlFJKuveVIgcWqKL1p9Lfdm8tIApkTB4rHovpnL07wnCOZg==
   dependencies:
-    lodash "^4.17.21"
-    tslib "^2.1.0"
-
-"@m78/verify@^1.1.1":
-  version "1.1.1"
-  resolved "https://registry.npmjs.org/@m78/verify/-/verify-1.1.1.tgz#e193ac9de418611195fcc31c48fe98d88d3a6433"
-  integrity sha512-cT/hLbGUxYoUsc789NN4Vwbl318f+mCd6tLSKkX3iIXr2VOS7xFqZSCIdCYGfuIVbMBsli7YxHdhNGL+13/kBw==
-  dependencies:
-    "@lxjx/utils" "^1.16.0"
+    "@lxjx/utils" "^1.7.7"
     "@types/lodash" "^4.14.172"
     lodash "^4.17.21"
     tslib "^2.3.1"

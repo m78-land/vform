@@ -1,22 +1,27 @@
 import { __awaiter, __generator, __spreadArray, __assign } from 'tslib';
 import cloneDeep from 'lodash/cloneDeep';
 import { createVerify } from '@m78/verify';
-import { createEvent, stringifyNamePath, setNamePathValue, getNamePathValue, isNumber, isTrueEmpty, isArray, createRandString, ensureArray, move, swap } from '@lxjx/utils';
+import { createEvent, stringifyNamePath, setNamePathValue, getNamePathValue, isNumber, isTrueEmpty, isArray, ensureArray, createRandString, move, swap } from '@lxjx/utils';
 
 var defaultFormConfig = {
     defaultValue: {},
     verifyFirst: false,
 };
+/** 如果field属于某个list, 将list设置为它的parent */
+var privateKeyParent = 'parent';
+/** 为vList设置一个用于存储默认字段的私有属性, 用于重置list时将其还原 */
+var privateKeyDefaultField = 'defaultField';
 /** 检测一个field like是否为 listField */
 function isListField(f) {
     return 'list' in f;
 }
-/** 设置field私有属性, 用于判断field是否属于某个list */
-function setPrivateParent(field, parent) {
-    field.__parent = parent;
+/** 为对象设私有属性设置值 */
+function setPrivateKey(obj, k, v) {
+    obj["__" + k] = v;
 }
-function getPrivateParent(field) {
-    return field.__parent || null;
+/** 获取对象设私有属性 */
+function getPrivateKey(obj, k) {
+    return obj["__" + k];
 }
 /** 将任意多个field数组去重并合并返回 */
 function uniqueFields() {
@@ -77,8 +82,6 @@ function formFactory(config) {
         sortStep: 100,
         defaultValue: cloneDeep(dv),
         list: [],
-        tickUpdate: tickUpdate,
-        tickChange: tickChange,
         touchLock: false,
         fieldFailEmitLock: false,
     };
@@ -206,7 +209,7 @@ function formFactory(config) {
         var key = stringifyNamePath(name);
         var ind = ls.findIndex(function (item) { return item.key === key; });
         var cur = ls[ind];
-        var parent = getPrivateParent(cur);
+        var parent = getPrivateKey(cur, privateKeyParent);
         if (parent) {
             parent.list.forEach(function (item) {
                 var i = item.list.findIndex(function (it) { return it.key === key; });
@@ -277,7 +280,7 @@ function fieldFactory(form, ctx) {
                 return defaultValue;
             if (!skipParentCheck) {
                 // 如果存在list父级, 应该从父级取defaultValue
-                var parent_1 = getPrivateParent(field);
+                var parent_1 = getPrivateKey(field, privateKeyParent);
                 if (parent_1 && parent_1.defaultValue !== undefined) {
                     var obj = {};
                     setNamePathValue(obj, parent_1.name, parent_1.defaultValue);
@@ -290,15 +293,22 @@ function fieldFactory(form, ctx) {
             ctx.touchLock = true;
             // 如果是list则将其重置, 只保留包含default的项
             if (isListField(field)) {
-                field.list = field.list
-                    .filter(function (item) { return isNumber(item.defaultIndex); })
-                    .sort(function (a, b) { return a.defaultIndex - b.defaultIndex; });
+                // 更新所有现有字段
+                form.tickUpdate.apply(form, field.getFlatChildren());
+                field.list = __spreadArray([], getPrivateKey(field, privateKeyDefaultField));
                 // 原地交换, 主要目的是更新name中的index
                 if (field.list.length !== 0) {
                     field.swap(0, 0);
                 }
+                // 为以更新的列表还原值
+                field.getFlatChildren().forEach(function (it) {
+                    it.value = it.defaultValue;
+                    it.touched = false;
+                });
             }
-            field.value = cloneDeep(field.defaultValue);
+            else {
+                field.value = cloneDeep(field.defaultValue);
+            }
             field.validating = false;
             field.error = '';
             field.touched = false;
@@ -357,7 +367,7 @@ function fieldFactory(form, ctx) {
                     if (touched === n)
                         return;
                     touched = n;
-                    ctx.tickUpdate(field);
+                    form.tickUpdate(field);
                 },
             },
             value: {
@@ -385,7 +395,7 @@ function fieldFactory(form, ctx) {
                     if (validating === n)
                         return;
                     validating = n;
-                    ctx.tickUpdate(field);
+                    form.tickUpdate(field);
                 },
             },
             error: {
@@ -398,7 +408,7 @@ function fieldFactory(form, ctx) {
                     if (error === err)
                         return;
                     error = err;
-                    ctx.tickUpdate(field);
+                    form.tickUpdate(field);
                 },
             },
             valid: {
@@ -411,7 +421,7 @@ function fieldFactory(form, ctx) {
                     if (valid === v)
                         return;
                     valid = v;
-                    ctx.tickUpdate(field);
+                    form.tickUpdate(field);
                 },
             },
             changed: {
@@ -444,7 +454,11 @@ function fieldFactory(form, ctx) {
 
 function listFactory(form, ctx) {
     var createList = function (fConf) {
+        var existField = form.getField(fConf.name);
+        if (existField)
+            return existField;
         var field = form.createField(__assign(__assign({}, fConf), { separate: true }));
+        // value不是数组时将其强制转换为数组
         if (!isArray(field.value)) {
             ctx.touchLock = true;
             field.value = [];
@@ -453,6 +467,9 @@ function listFactory(form, ctx) {
         var vList = Object.assign(field, {
             list: [],
         });
+        // 备份需要为自动fill的字段填充的值
+        var fillValueMap = {};
+        setPrivateKey(vList, privateKeyDefaultField, []);
         vList.getFlatChildren = function (validIsTrue) {
             var ls = [];
             if (validIsTrue && !vList.valid)
@@ -493,40 +510,76 @@ function listFactory(form, ctx) {
             updateList.push.apply(updateList, __spreadArray(__spreadArray([], fCurrent.list), tCurrent.list));
             fn(vList.list, ind1, ind2);
             syncItemNameIndex();
-            ctx.tickUpdate.apply(ctx, updateList);
-            ctx.tickChange(vList);
+            form.tickUpdate.apply(form, updateList);
+            form.tickChange(vList);
         }
-        vList.add = function (fields, key, isDefault) {
+        vList.withName = function (index, name) {
+            if (name === void 0) { name = []; }
+            return __spreadArray(__spreadArray(__spreadArray([], ensureArray(vList.name)), [String(index)]), ensureArray(name));
+        };
+        vList.add = function (_a) {
+            var _b;
+            var _c = _a === void 0 ? {} : _a, _d = _c.fields, fields = _d === void 0 ? [] : _d, key = _c.key, isDefault = _c.isDefault, fillValue = _c.fillValue;
             var updateList = [vList];
-            // 设置私有字段标示
+            // 为所有子项设置私有字段标示
             fields.forEach(function (item) {
-                setPrivateParent(item, vList);
+                setPrivateKey(item, privateKeyParent, vList);
             });
+            var _key = key || createRandString();
+            // 当前操作的item记录
+            var _current = null;
+            // 如果传入了fillValue则覆盖当前的
+            if (fillValue !== undefined) {
+                fillValueMap[_key] = fillValue;
+            }
+            // 未传入key时先后新增
             if (!key) {
-                vList.list.push({
-                    key: createRandString(),
+                var lItem = {
+                    key: _key,
                     list: uniqueFields(fields),
-                    defaultIndex: isDefault ? vList.list.length : undefined,
-                });
+                };
+                if (isDefault) {
+                    getPrivateKey(vList, privateKeyDefaultField)[vList.list.length] = lItem;
+                }
+                vList.list.push(lItem);
                 updateList.push.apply(updateList, fields);
+                _current = lItem;
             }
             else {
-                var current = getListItemByKey(key)[0];
+                // 包含key, 新增到key的位置并去重
+                var current = getListItemByKey(_key)[0];
                 if (current) {
                     current.list = uniqueFields(current.list, fields);
                     updateList.push.apply(updateList, current.list);
+                    _current = current;
                 }
             }
-            // 将所有新增字段的值设置为默认值?
-            fields.forEach(function (item) {
-                ctx.touchLock = true;
-                if (item.value === undefined) {
-                    item.value = item.defaultValue;
+            var index = vList.list.findIndex(function (item) { return item === _current; });
+            // 为所有新增的field设置默认值或fillValues
+            if (_current) {
+                var fillData_1 = fillValueMap[_key];
+                // 用于fillValue取值的对象
+                var vData_1 = {};
+                if (fillData_1 !== undefined) {
+                    setNamePathValue(vData_1, vList.withName(index), fillData_1);
                 }
-                ctx.touchLock = false;
-            });
-            ctx.tickUpdate.apply(ctx, updateList);
-            ctx.tickChange(vList);
+                _current.list.forEach(function (item) {
+                    ctx.touchLock = true;
+                    if (fillData_1 !== undefined) {
+                        item.value = getNamePathValue(vData_1, item.name);
+                    }
+                    else if (item.value === undefined) {
+                        item.value = item.defaultValue;
+                    }
+                    ctx.touchLock = false;
+                });
+            }
+            // 未传入field时, 通知onFillField
+            if (!fields.length) {
+                (_b = fConf.onFillField) === null || _b === void 0 ? void 0 : _b.call(fConf, vList, _key, index);
+            }
+            form.tickUpdate.apply(form, updateList);
+            form.tickChange(vList);
         };
         vList.remove = function (index) {
             var updateList = [vList];
@@ -535,15 +588,12 @@ function listFactory(form, ctx) {
                 updateList.push.apply(updateList, current.list);
                 vList.list.splice(index, 1);
                 syncItemNameIndex();
-                ctx.tickUpdate.apply(ctx, updateList);
-                ctx.tickChange(vList);
+                form.tickUpdate.apply(form, updateList);
+                form.tickChange(vList);
             }
         };
         vList.move = function (key1, key2) { return swapAndMoveHelper(key1, key2, move); };
         vList.swap = function (key1, key2) { return swapAndMoveHelper(key1, key2, swap); };
-        vList.withName = function (index, name) {
-            return __spreadArray(__spreadArray(__spreadArray([], ensureArray(vList.name)), [String(index)]), ensureArray(name));
-        };
         Object.defineProperty(vList, 'value', {
             configurable: true,
             enumerable: true,
@@ -557,13 +607,55 @@ function listFactory(form, ctx) {
             },
             // 设置值, 需要设置所有子级的值
             set: function (val) {
+                var _a;
+                if (!isArray(val))
+                    return;
+                var len = vList.list.length;
+                var diff = val.length - len;
+                if (diff < 0) {
+                    // val长度小于当期记录数, 删除list中多出来的记录
+                    var rLs = vList.list.splice(val.length, Math.abs(diff));
+                    var changes = rLs.reduce(function (p, i) {
+                        p.push.apply(p, i.list);
+                        return p;
+                    }, []);
+                    if (changes.length)
+                        form.tickUpdate.apply(form, changes);
+                }
+                else if (diff > 0) {
+                    // val大于当前记录数, 将缺少的记录添加为空白记录并触发onFillField
+                    for (var i = 0; i < diff; i++) {
+                        var curIndex = len + i;
+                        vList.add({
+                            fillValue: val[curIndex],
+                        });
+                        var key = vList.list[curIndex].key;
+                        // 自动增加了记录, 对外通知
+                        (_a = fConf.onFillField) === null || _a === void 0 ? void 0 : _a.call(fConf, vList, key, curIndex);
+                    }
+                }
                 vList.getFlatChildren().forEach(function (item) {
                     var obj = {};
                     setNamePathValue(obj, vList.name, val);
                     item.value = getNamePathValue(obj, item.name);
                 });
+                // 将值记录到fillValue中, 用于处理field挂载在value赋值之后的情况
+                vList.list.forEach(function (item, index) {
+                    fillValueMap[item.key] = val[index];
+                });
+                form.tickChange(vList);
             },
         });
+        // 包含默认值时将列表扩展到对应长度, 列表字段无法确定所以交给用户根据list长度自动补全
+        if (isArray(vList.defaultValue) && vList.defaultValue.length) {
+            vList.defaultValue.forEach(function () {
+                return vList.add({
+                    isDefault: true,
+                });
+            });
+            fConf.onFillField &&
+                vList.list.forEach(function (item, index) { var _a; return (_a = fConf.onFillField) === null || _a === void 0 ? void 0 : _a.call(fConf, vList, item.key, index); });
+        }
         if (!fConf.separate) {
             ctx.list.push(vList);
         }
